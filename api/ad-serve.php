@@ -122,7 +122,7 @@ try {
     
     // Call internal RTB handler
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, 'https://up.adstart.click/api/rtb-handler.php');
+    curl_setopt($ch, CURLOPT_URL, 'https://up.adstart.click/rtb/endpoint.php');
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($rtb_request));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
