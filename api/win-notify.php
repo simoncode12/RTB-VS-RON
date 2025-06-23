@@ -81,6 +81,15 @@ try {
         $publisher_revenue = $total_revenue * ($publisher_share / 100);
         $platform_revenue = $total_revenue - $publisher_revenue;
         
+        // Update campaign spending
+        $stmt = $pdo->prepare("
+            UPDATE campaigns 
+            SET daily_spent = COALESCE(daily_spent, 0) + ?,
+                total_spent = COALESCE(total_spent, 0) + ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$total_revenue, $total_revenue, $campaign_id]);
+        
         // Track revenue (if we have publisher info)
         if ($campaign['publisher_id']) {
             $today = date('Y-m-d');

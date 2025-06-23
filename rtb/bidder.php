@@ -105,6 +105,8 @@ class RTBBidder {
             AND c.status = 'active' 
             AND cr.status = 'active'
             AND (cr.width = ? AND cr.height = ?)
+            AND (c.daily_budget IS NULL OR COALESCE(c.daily_spent, 0) < c.daily_budget)
+            AND (c.total_budget IS NULL OR COALESCE(c.total_spent, 0) < c.total_budget)
         ";
         
         $params = [];
@@ -140,6 +142,8 @@ class RTBBidder {
             AND c.status = 'active' 
             AND cr.status = 'active'
             AND (cr.width = ? AND cr.height = ?)
+            AND (c.daily_budget IS NULL OR COALESCE(c.daily_spent, 0) < c.daily_budget)
+            AND (c.total_budget IS NULL OR COALESCE(c.total_spent, 0) < c.total_budget)
         ";
         
         $params = [];
@@ -335,6 +339,53 @@ class RTBBidder {
             
         } catch (Exception $e) {
             error_log('Log bid error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Update campaign spending when a bid wins
+     */
+    public function updateCampaignSpending($campaign_id, $amount) {
+        try {
+            $stmt = $this->pdo->prepare("
+                UPDATE campaigns 
+                SET daily_spent = COALESCE(daily_spent, 0) + ?,
+                    total_spent = COALESCE(total_spent, 0) + ?
+                WHERE id = ?
+            ");
+            
+            $stmt->execute([$amount, $amount, $campaign_id]);
+            
+        } catch (Exception $e) {
+            error_log('Update spending error: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Check if campaign has remaining budget
+     */
+    public function checkCampaignBudget($campaign_id) {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    daily_budget,
+                    total_budget,
+                    COALESCE(daily_spent, 0) as daily_spent,
+                    COALESCE(total_spent, 0) as total_spent,
+                    (daily_budget IS NULL OR COALESCE(daily_spent, 0) < daily_budget) as daily_ok,
+                    (total_budget IS NULL OR COALESCE(total_spent, 0) < total_budget) as total_ok
+                FROM campaigns 
+                WHERE id = ?
+            ");
+            
+            $stmt->execute([$campaign_id]);
+            $budget = $stmt->fetch();
+            
+            return $budget && $budget['daily_ok'] && $budget['total_ok'];
+            
+        } catch (Exception $e) {
+            error_log('Check budget error: ' . $e->getMessage());
+            return false;
         }
     }
 }
